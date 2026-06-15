@@ -106,6 +106,7 @@
     margin-bottom:14px;
     scrollbar-width:none;
     -webkit-overflow-scrolling:touch;
+    cursor:grab;
   }
   .date-scroll::-webkit-scrollbar{display:none;}
   .date-card{
@@ -162,15 +163,23 @@
     width:4px;background:var(--brand);
   }
   .list-row .time-col{
-    flex:0 0 64px;
+    flex:0 0 52px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
     font-family:"Roboto Mono",monospace;
     font-weight:700;
-    font-size:13px;
-    line-height:1.5;
+    font-size:12px;
+    line-height:1.6;
     color:var(--text);
     padding-top:1px;
   }
-  .list-row .time-col .end-time{
+  .list-row .time-col .t-sep{
+    color:var(--text-muted);
+    font-weight:500;
+    font-size:11px;
+  }
+  .list-row .time-col .t-end{
     color:var(--text-muted);
     font-weight:500;
   }
@@ -196,7 +205,7 @@
   }
   .list-row .place a:hover{text-decoration:underline;}
 
-  /* 卡片式：每個行程一張卡 */
+  /* 卡片式：每個行程一張卡，時間放大置於行程名稱上方 */
   .activity-card{
     background:var(--surface);
     border:1px solid var(--border);
@@ -204,7 +213,7 @@
     box-shadow:var(--shadow);
     padding:14px 16px;
     display:flex;
-    gap:14px;
+    flex-direction:column;
     margin-bottom:10px;
   }
   .activity-card:last-child{margin-bottom:0;}
@@ -212,19 +221,29 @@
     background:linear-gradient(90deg, var(--brand-25), var(--brand-08));
     border-color:var(--brand-45);
   }
-  .activity-card .time-col{
-    flex:0 0 64px;
+  .activity-card .card-time{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
     font-family:"Roboto Mono",monospace;
     font-weight:700;
-    font-size:13px;
-    line-height:1.5;
-    padding-top:1px;
+    line-height:1.25;
+    margin-bottom:8px;
   }
-  .activity-card .time-col .end-time{
+  .activity-card .card-time .t-start,
+  .activity-card .card-time .t-end{
+    font-size:24px;
+  }
+  .activity-card .card-time .t-sep{
+    font-size:13px;
     color:var(--text-muted);
     font-weight:500;
+    line-height:1;
   }
-  .activity-card .content-col{flex:1;min-width:0;}
+  .activity-card .card-time .t-end{
+    color:var(--text-muted);
+  }
+  .activity-card .content-col{min-width:0;}
   .activity-card .activity{
     font-size:15px;
     font-weight:700;
@@ -315,24 +334,24 @@
     box-shadow:0 8px 24px rgba(0,0,0,0.35);
     overflow:hidden;
     z-index:50;
-    min-width:160px;
+    min-width:220px;
     display:none;
   }
   .menu-panel.open{display:block;}
   .menu-item{
     display:flex;
     align-items:center;
-    gap:12px;
-    padding:13px 16px;
+    gap:16px;
+    padding:18px 20px;
     cursor:pointer;
-    font-size:14px;
+    font-size:17px;
     font-weight:500;
     color:var(--text);
     border-bottom:1px solid var(--border);
   }
   .menu-item:last-child{border-bottom:none;}
   .menu-item:active{background:var(--surface-2);}
-  .menu-item svg{width:18px;height:18px;color:var(--brand);flex-shrink:0;}
+  .menu-item svg{width:24px;height:24px;color:var(--brand);flex-shrink:0;}
   .menu-item.active-page{color:var(--brand);}
 
   /* ===================== 頁面容器 ===================== */
@@ -380,21 +399,21 @@
   .exchange-actions{
     display:flex;
     align-items:center;
-    justify-content:flex-end;
     gap:10px;
     margin-top:16px;
   }
   .clear-btn{
-    background:var(--surface-2);
-    border:1px solid var(--border);
-    color:var(--text);
-    font-size:13px;
+    flex:1;
+    background:var(--brand);
+    border:none;
+    color:#fff;
+    font-size:14px;
     font-weight:700;
-    padding:10px 20px;
+    padding:13px 20px;
     border-radius:var(--radius-sm);
     cursor:pointer;
   }
-  .clear-btn:active{background:var(--surface-3);}
+  .clear-btn:active{background:rgb(calc(var(--brand-r) - 20),calc(var(--brand-g) - 20),calc(var(--brand-b) - 20));}
 
   .keypad{
     margin-top:auto;
@@ -526,7 +545,7 @@
   <!-- ===================== 頁面：外部連結 ===================== -->
   <div class="page" id="page-links">
     <div class="header">
-      <div class="trip-title">外部連結</div>
+      <div class="trip-title" id="tripTitleLinks">行程載入中...</div>
       <button class="theme-toggle" id="themeToggle2" aria-label="切換深色/淺色模式"></button>
     </div>
     <div class="links-grid" id="linksGrid">
@@ -752,6 +771,7 @@ function switchPage(page){
     viewToggleBtn.style.display = 'none';
     menuFab.classList.add('inline-pos');
     exchangeActions.insertBefore(menuFab, exchangeActions.firstChild);
+    resetExchangeFull();
   } else {
     viewToggleBtn.style.display = 'none';
     menuFab.classList.remove('inline-pos');
@@ -815,7 +835,10 @@ async function loadItinerary(){
   const rows = await fetchSheet(SHEET_NAMES.itinerary);
   // rows[0] = 活動名稱 (A1)
   tripTitle = (rows[0] && rows[0][0]) ? rows[0][0] : '我的行程';
+  // 試算表讀取時，標題尾端有時會多帶出欄位標頭文字「日期」，這裡將其移除
+  tripTitle = tripTitle.replace(/\s*日期\s*$/, '');
   document.getElementById('tripTitle').textContent = tripTitle;
+  document.getElementById('tripTitleLinks').textContent = tripTitle;
 
   // rows[1] = 標題列（日期/開始時間/.../備註）
   const dataRows = rows.slice(2);
@@ -876,6 +899,7 @@ function renderDateCards(){
     card.className = 'date-card' + (date === selectedDate ? ' active' : '');
     card.innerHTML = `<div class="d-date">${escapeHtml(dateLine)}</div><div class="d-day">${escapeHtml(dayLine)}</div>`;
     card.addEventListener('click', () => {
+      if(container.dataset.dragged === '1') return; // 拖動捲動時不觸發選取
       selectedDate = date;
       renderDateCards();
       renderItinerary();
@@ -885,6 +909,36 @@ function renderDateCards(){
     container.appendChild(card);
   });
 }
+
+/* 電腦版：以滑鼠拖曳橫向捲動日期卡片區 */
+(function enableDragScroll(){
+  const el = document.getElementById('dateScroll');
+  let isDown = false;
+  let startX = 0;
+  let scrollLeft = 0;
+
+  el.addEventListener('mousedown', (e) => {
+    isDown = true;
+    el.dataset.dragged = '0';
+    startX = e.pageX;
+    scrollLeft = el.scrollLeft;
+    el.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mouseup', () => {
+    isDown = false;
+    el.style.cursor = '';
+  });
+  window.addEventListener('mouseleave', () => {
+    isDown = false;
+  });
+  el.addEventListener('mousemove', (e) => {
+    if(!isDown) return;
+    e.preventDefault();
+    const dx = e.pageX - startX;
+    if(Math.abs(dx) > 4) el.dataset.dragged = '1';
+    el.scrollLeft = scrollLeft - dx;
+  });
+})();
 
 function placeHtml(row){
   let html = '';
@@ -927,7 +981,11 @@ function renderItinerary(){
       const r = document.createElement('div');
       r.className = 'list-row' + (current ? ' current' : '');
       r.innerHTML = `
-        <div class="time-col">${escapeHtml(row.start)}<br><span class="end-time">-${escapeHtml(row.end)}</span></div>
+        <div class="time-col">
+          <div class="t-start">${escapeHtml(row.start)}</div>
+          <div class="t-sep">-</div>
+          <div class="t-end">${escapeHtml(row.end)}</div>
+        </div>
         <div class="content-col">
           <div class="activity">${nl2br(row.activity)}</div>
           ${placeHtml(row)}
@@ -942,7 +1000,11 @@ function renderItinerary(){
       const c = document.createElement('div');
       c.className = 'activity-card' + (current ? ' current' : '');
       c.innerHTML = `
-        <div class="time-col">${escapeHtml(row.start)}<br><span class="end-time">-${escapeHtml(row.end)}</span></div>
+        <div class="card-time">
+          <div class="t-start">${escapeHtml(row.start)}</div>
+          <div class="t-sep">-</div>
+          <div class="t-end">${escapeHtml(row.end)}</div>
+        </div>
         <div class="content-col">
           <div class="activity">${nl2br(row.activity)}</div>
           ${placeHtml(row)}
@@ -986,6 +1048,35 @@ function formatNumber(num){
   let parts = rounded.toString().split('.');
   parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   return parts.join('.');
+}
+
+/* 將輸入中的算式字串加上千分位顯示（不影響實際運算用的 expr） */
+function formatIntWithCommas(s){
+  if(s === '') return '0';
+  return s.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+function formatNumPart(numStr){
+  if(numStr === '') return '';
+  const dotIdx = numStr.indexOf('.');
+  if(dotIdx === -1) return formatIntWithCommas(numStr);
+  const intPart = numStr.slice(0, dotIdx);
+  const decPart = numStr.slice(dotIdx+1);
+  return formatIntWithCommas(intPart) + '.' + decPart;
+}
+function formatExprForDisplay(str){
+  let result = '';
+  let num = '';
+  for(let i=0;i<str.length;i++){
+    const c = str[i];
+    if(/[0-9.]/.test(c)){
+      num += c;
+    } else {
+      if(num !== ''){ result += formatNumPart(num); num=''; }
+      result += c;
+    }
+  }
+  if(num !== '') result += formatNumPart(num);
+  return result;
 }
 
 /* 簡易算式運算（支援 + - × ÷ %，× ÷ 優先於 + -，% 為前一數字除以100） */
@@ -1057,27 +1148,34 @@ function syncFromExpr(){
   const val = evalExpr(expr);
   const twdInput = document.getElementById('twdInput');
   const fxInput = document.getElementById('fxInput');
+  const display = formatExprForDisplay(expr);
 
   if(activeInput === 'twd'){
-    twdInput.value = expr;
+    twdInput.value = display;
     if(!isNaN(val)){
       const fx = val * (fxRate/twdRate);
       fxInput.value = formatNumber(fx);
-    } else {
-      fxInput.value = '';
     }
+    // 算式不完整(如 "100+")無法計算時，外幣欄位保留上次數值不變
   } else if(activeInput === 'fx'){
-    fxInput.value = expr;
+    fxInput.value = display;
     if(!isNaN(val)){
       const twd = val * (twdRate/fxRate);
       twdInput.value = formatNumber(twd);
-    } else {
-      twdInput.value = '';
     }
+    // 算式不完整時，新台幣欄位保留上次數值不變
   }
 }
 
+/* 清空：保留目前作用中的欄位，下次輸入仍維持在同一欄位 */
 function clearExchange(){
+  expr = '';
+  document.getElementById('twdInput').value = '';
+  document.getElementById('fxInput').value = '';
+}
+
+/* 完整重置：切換到匯率頁時使用，連同欄位選擇一起清空 */
+function resetExchangeFull(){
   expr = '';
   activeInput = null;
   document.getElementById('twdInput').value = '';
