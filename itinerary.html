@@ -869,20 +869,12 @@ async function loadItinerary(){
   // 第1列(index 0)：活動名稱在A1
   tripTitle = (rows[0] && rows[0][0]) ? rows[0][0] : '我的行程';
   tripTitle = tripTitle.replace(/\s*日期\s*$/, '').trim();
+  document.title = tripTitle;
   document.getElementById('tripTitle').textContent = tripTitle;
   document.getElementById('tripTitleLinks').textContent = tripTitle;
 
-  // 動態找到欄位標題列（A欄為「日期」的那列），從它的下一列開始讀資料
-  // 這樣不管CSV多輸出幾列空白列都能正確定位
-  let headerIdx = -1;
-  for(let i = 0; i < rows.length; i++){
-    if((rows[i][0]||'').trim() === '日期'){
-      headerIdx = i;
-      break;
-    }
-  }
-  const dataStartIdx = headerIdx >= 0 ? headerIdx + 1 : 2;
-  const dataRows = rows.slice(dataStartIdx);
+  // 不依賴標題列位置，直接用A欄是否符合日期格式(數字/數字)來判斷是否為資料列
+  const dataRows = rows.filter(r => /^\d+\/\d+$/.test((r[0]||'').trim()));
 
   itineraryRows = [];
   dateList = [];
