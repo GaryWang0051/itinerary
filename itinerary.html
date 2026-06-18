@@ -531,6 +531,10 @@
   <!-- ===================== 頁面：匯率 ===================== -->
   <div class="page" id="page-exchange">
     <div class="exchange-inner">
+    <div class="header" style="flex-shrink:0;">
+      <div class="trip-title" id="tripTitleExchange">行程載入中...</div>
+      <button class="theme-toggle" id="themeToggle3" aria-label="切換深色/淺色模式"></button>
+    </div>
     <div class="exchange-top">
         <div class="currency-row">
           <label id="twdLabel">新台幣</label>
@@ -701,6 +705,7 @@ function renderThemeIcon(){
     : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
   document.getElementById('themeToggle').innerHTML = icon;
   document.getElementById('themeToggle2').innerHTML = icon;
+  document.getElementById('themeToggle3').innerHTML = icon;
 }
 function toggleTheme(){
   const cur = document.body.getAttribute('data-theme');
@@ -708,6 +713,7 @@ function toggleTheme(){
 }
 document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 document.getElementById('themeToggle2').addEventListener('click', toggleTheme);
+document.getElementById('themeToggle3').addEventListener('click', toggleTheme);
 
 /* 初始化主題：預設深色 */
 applyTheme(getStoredTheme() || 'dark');
@@ -872,6 +878,7 @@ async function loadItinerary(){
   document.title = tripTitle;
   document.getElementById('tripTitle').textContent = tripTitle;
   document.getElementById('tripTitleLinks').textContent = tripTitle;
+  document.getElementById('tripTitleExchange').textContent = tripTitle;
 
   // 不依賴標題列位置，直接用A欄是否符合日期格式(數字/數字)來判斷是否為資料列
   const dataRows = rows.filter(r => /^\d+\/\d+$/.test((r[0]||'').trim()));
