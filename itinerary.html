@@ -440,10 +440,11 @@
   .clear-btn:active{background:rgb(calc(var(--brand-r) - 20),calc(var(--brand-g) - 20),calc(var(--brand-b) - 20));}
 
   .keypad{
-    /* 理想高度 300px；空間不足時縮小，最小不低於 200px */
-    height:min(300px, calc(100dvh - 320px));
+    /* 鍵盤佔可視高度約 45%，空間不足時縮小但不低於 200px */
+    height:min(45dvh, calc(100dvh - 300px));
     min-height:200px;
     flex-shrink:1;
+    margin-top:auto; /* 推到底部，留白自動在中間 */
     display:grid;
     grid-template-columns:repeat(4,1fr);
     grid-template-rows:repeat(5,1fr);
